@@ -994,9 +994,9 @@ def main():
     # Sample images available for the Image Analysis tab, so a reviewer
     # doesn't need to source and upload their own test image.
     sample_images = {
-        "Tiger (normal)": "samples/tiger.jpg",
-        "Tiger (threat/fire)": "samples/tiger_fire.jpg",
-        "Elephant (normal)": "samples/elephant.jpg",
+        "Tiger (normal)": "tiger.jpg",
+        "Tiger (threat/fire)": "tiger_fire.jpg",
+        "Elephant (normal)": "elephant.jpg",
     }
 
     if upload_type == "📷 Image Analysis":
