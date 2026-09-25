@@ -1423,9 +1423,10 @@ def main():
             **🔍 How to use:**
             1. Choose Image or Video analysis
             2. Upload your wildlife content, or pick a sample image
-            3. Click analyze/process button
-            4. Review AI detection results
-            5. Download reports and processed files
+            3. If the image fails to upload after the sample experiment, refresh the page.
+            4. Click analyze/process button
+            5. Review AI detection results
+            6. Download reports and processed files
 
             **🦁 Supported Animals:**
             - Tigers 🐅
