@@ -129,7 +129,7 @@ def speak_alert_web(message):
     """Use browser's speech synthesis - works in cloud environments"""
     # Clean message for JavaScript (escape quotes and special chars)
     clean_message = message.replace('"', '\\"').replace("'", "\\'")
-    
+
     speech_js = f"""
     <script>
     if ('speechSynthesis' in window) {{
@@ -137,7 +137,7 @@ def speak_alert_web(message):
         utterance.rate = 0.8;
         utterance.pitch = 1.0;
         utterance.volume = 0.9;
-        
+
         // Wait a moment then speak
         setTimeout(() => {{
             speechSynthesis.speak(utterance);
@@ -155,16 +155,16 @@ def speak_alert(message):
         engine = pyttsx3.init()
         engine.setProperty('rate', 150)
         engine.setProperty('volume', 0.9)
-        
+
         def tts_thread():
             engine.say(message)
             engine.runAndWait()
             engine.stop()
-        
+
         thread = threading.Thread(target=tts_thread)
         thread.daemon = True
         thread.start()
-        
+
         return True
     except ImportError:
         return False
@@ -190,26 +190,26 @@ def create_session_charts():
     """Create charts for current session data"""
     if not st.session_state.session_history:
         return None, None, None
-    
+
     # Combine all session data
     all_species = {}
     all_conditions = {}
     all_threats = {}
-    
+
     for entry in st.session_state.session_history:
         # Species data
         for species, count in entry['species_breakdown'].items():
             all_species[species] = all_species.get(species, 0) + count
-        
-        # Condition data  
+
+        # Condition data
         for condition, count in entry['condition_breakdown'].items():
             all_conditions[condition] = all_conditions.get(condition, 0) + count
-        
+
         # Threat data
         for threat, count in entry['threat_breakdown'].items():
             if threat != 'None':
                 all_threats[threat] = all_threats.get(threat, 0) + count
-    
+
     return all_species, all_conditions, all_threats
 
 def get_specific_location_for_alert(animal_type):
@@ -229,11 +229,11 @@ class Block:
         self.previous_hash = previous_hash
         self.nonce = 0
         self.hash = self.calculate_hash()
-    
+
     def calculate_hash(self):
         block_string = f"{self.index}{self.timestamp}{json.dumps(self.data, default=str)}{self.previous_hash}{self.nonce}"
         return hashlib.sha256(block_string.encode()).hexdigest()
-    
+
     def mine_block(self, difficulty=2):
         target = "0" * difficulty
         while self.hash[:difficulty] != target:
@@ -245,17 +245,17 @@ class WildlifeBlockchain:
     def __init__(self):
         self.chain = [self.create_genesis_block()]
         self.difficulty = 2
-        
+
     def create_genesis_block(self):
         genesis_data = {
             "message": "Wildlife Protection Blockchain Initialized",
             "timestamp": datetime.now().isoformat()
         }
         return Block(0, time.time(), genesis_data, "0")
-    
+
     def get_latest_block(self):
         return self.chain[-1]
-    
+
     def add_animal_detection(self, animal_data):
         block = Block(
             len(self.chain),
@@ -266,19 +266,19 @@ class WildlifeBlockchain:
         block.mine_block(self.difficulty)
         self.chain.append(block)
         return block
-    
+
     def validate_chain(self):
         for i in range(1, len(self.chain)):
             current_block = self.chain[i]
             previous_block = self.chain[i-1]
-            
+
             if current_block.hash != current_block.calculate_hash():
                 return False
-            
+
             if current_block.previous_hash != previous_block.hash:
                 return False
         return True
-    
+
     def get_chain_data(self):
         return [
             {
@@ -311,7 +311,7 @@ if 'total_analyses' not in st.session_state:
 # Model file paths
 MODEL_FILES = {
     "yolo12n": "yolo12n.pt",
-    "best": "best.pt", 
+    "best": "best.pt",
     "bests": "envo_best.pt",
     "best_train": "best_train.pt"
 }
@@ -323,26 +323,26 @@ def load_models_silently():
     """Load all AI models silently in the background"""
     if st.session_state.models_loaded:
         return st.session_state.model, st.session_state.model2, st.session_state.animal_envo, st.session_state.animal_condition_model
-    
+
     models_loaded = {}
-    
+
     try:
         # Load YOLO models
         if os.path.exists(MODEL_FILES["yolo12n"]):
             models_loaded["model"] = YOLO(MODEL_FILES["yolo12n"])
         else:
             models_loaded["model"] = YOLO("yolo12n.pt")  # Auto-download
-        
+
         if os.path.exists(MODEL_FILES["best"]):
             models_loaded["model2"] = YOLO(MODEL_FILES["best"])
         else:
             raise Exception("best.pt not found")
-        
+
         if os.path.exists(MODEL_FILES["bests"]):
             models_loaded["animal_envo"] = YOLO(MODEL_FILES["bests"])
         else:
             raise Exception("bests.pt not found")
-        
+
         # Load condition classification model
         if not os.path.exists(MODEL_FILES["best_train"]):
             # Download silently
@@ -352,7 +352,7 @@ def load_models_silently():
                     for chunk in r.iter_content(chunk_size=8192):
                         if chunk:
                             f.write(chunk)
-        
+
         animal_condition_model = models.resnet18(pretrained=True)
         in_features = animal_condition_model.fc.in_features
         animal_condition_model.fc = nn.Linear(in_features, 2)
@@ -361,19 +361,19 @@ def load_models_silently():
         )
         animal_condition_model.eval()
         models_loaded["animal_condition_model"] = animal_condition_model
-        
+
         # Store in session state
         st.session_state.model = models_loaded["model"]
         st.session_state.model2 = models_loaded["model2"]
         st.session_state.animal_envo = models_loaded["animal_envo"]
         st.session_state.animal_condition_model = models_loaded["animal_condition_model"]
         st.session_state.models_loaded = True
-        
-        return (models_loaded["model"], 
-                models_loaded["model2"], 
-                models_loaded["animal_envo"], 
+
+        return (models_loaded["model"],
+                models_loaded["model2"],
+                models_loaded["animal_envo"],
                 models_loaded["animal_condition_model"])
-        
+
     except Exception as e:
         st.error(f"❌ Error loading models: {str(e)}")
         return None, None, None, None
@@ -477,24 +477,24 @@ def detect_all_animals(frame, model2):
 def get_condition(cropped, animal_condition_model):
     if cropped is None or cropped.size == 0:
         return "normal"
-    
+
     try:
         image = Image.fromarray(cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB))
         transform = T.Compose([T.Resize((224,224)), T.ToTensor()])
         image = transform(image).unsqueeze(0)
-        
+
         with torch.no_grad():
             output = animal_condition_model(image)
             probs = torch.softmax(output, dim=1)
             pred = torch.argmax(probs, dim=1).item()
-        
+
         return condition_class[pred]
     except:
         return "normal"
 
 def get_threats(frame, model, animal_envo):
     threats = []
-    
+
     try:
         results1 = model(frame, conf=0.6, verbose=False)
         for result in results1:
@@ -527,19 +527,19 @@ def improved_tracking(current_detections, previous_tracks, max_distance=150):
     """Improved tracking system to prevent duplicate IDs"""
     tracks = []
     used_track_ids = set()
-    
+
     # Sort detections by confidence to prioritize better detections
     current_detections = sorted(current_detections, key=lambda x: x["conf"], reverse=True)
-    
+
     for detection in current_detections:
         best_match = None
         min_distance = float('inf')
-        
+
         # Find the closest matching track of the same species
         for track_id, prev_info in previous_tracks.items():
             if track_id in used_track_ids:
                 continue
-                
+
             if prev_info["name"] == detection["name"]:
                 distance = calculate_distance(detection["center"], prev_info["center"])
                 # Use stricter distance threshold and confidence check
@@ -549,7 +549,7 @@ def improved_tracking(current_detections, previous_tracks, max_distance=150):
                     if conf_diff < 0.3:
                         min_distance = distance
                         best_match = track_id
-        
+
         if best_match:
             track_id = best_match
             used_track_ids.add(track_id)
@@ -557,26 +557,26 @@ def improved_tracking(current_detections, previous_tracks, max_distance=150):
             # Create new track ID with species count check
             existing_species_tracks = [tid for tid in previous_tracks.keys() if detection["name"] in tid]
             existing_current_species = [t["track_id"] for t in tracks if detection["name"] in t["track_id"]]
-            
+
             # Count existing tracks of this species
             species_count = len(existing_species_tracks) + len(existing_current_species) + 1
             track_id = f"{detection['name']}_{species_count}"
-            
+
             # Ensure uniqueness
             while track_id in previous_tracks or track_id in [t["track_id"] for t in tracks]:
                 species_count += 1
                 track_id = f"{detection['name']}_{species_count}"
-        
+
         tracks.append({
             "track_id": track_id,
             "detection": detection
         })
-    
+
     return tracks
 
 def show_voice_alert(alert_type, message, animal_type="", location="", threats=[]):
     """Show alert with voice notification"""
-    
+
     if alert_type == "injury":
         alert_html = f"""
         <div class="voice-alert">
@@ -588,7 +588,7 @@ def show_voice_alert(alert_type, message, animal_type="", location="", threats=[
         </div>
         """
         voice_msg = f"Alert! Injured {animal_type} detected at {location}. Medical assistance required immediately."
-        
+
     elif alert_type == "threat":
         threat_list = ", ".join(threats) if threats else "Unknown threat"
         alert_html = f"""
@@ -602,9 +602,9 @@ def show_voice_alert(alert_type, message, animal_type="", location="", threats=[
         </div>
         """
         voice_msg = f"Threat alert! {threat_list} detected at {location}. Immediate intervention required."
-    
+
     st.markdown(alert_html, unsafe_allow_html=True)
-    
+
     # Trigger voice alert if enabled
     if st.session_state.voice_enabled:
         try:
@@ -625,19 +625,19 @@ def show_voice_alert(alert_type, message, animal_type="", location="", threats=[
 def process_single_image(image_array):
     """Process a single image for wildlife detection - Fixed threat detection threshold"""
     model, model2, animal_envo, animal_condition_model = load_models_silently()
-    
+
     if not all([model, model2, animal_envo, animal_condition_model]):
         return None, None
-    
+
     # Detect animals
     detections = detect_animals_image(image_array, model2)
-    
+
     if not detections:
         return pd.DataFrame(), image_array
-    
+
     results_list = []
     output_image = image_array.copy()
-    
+
     # Check for threats - Fixed confidence threshold for images
     threats = []
     try:
@@ -664,16 +664,16 @@ def process_single_image(image_array):
         pass
 
     threats = list(set(threats)) if threats else ["None"]
-    
+
     # Process each detection
     for i, detection in enumerate(detections):
         # Get animal condition
         condition = get_condition(detection["cropped"], animal_condition_model)
-        
+
         # Get location
         location = get_random_location(detection["name"])
         threat_str = ",".join(threats)
-        
+
         # Create animal record
         animal_record = {
             "animal_id": f"{detection['name']}_{i+1}",
@@ -684,79 +684,79 @@ def process_single_image(image_array):
             "location": location,
             "confidence": round(detection["conf"], 2)
         }
-        
+
         # Add to blockchain
         try:
             st.session_state.blockchain.add_animal_detection(animal_record)
         except:
             pass
-        
+
         results_list.append(animal_record)
-        
+
         # Enhanced bounding box drawing with better visibility
         x1, y1, x2, y2 = detection["bbox"]
         color = animal_colors.get(detection["name"], (255, 255, 255))
-        
+
         # Draw thicker, more visible bounding box
         cv2.rectangle(output_image, (x1, y1), (x2, y2), color, 4)  # Increased thickness
-        
+
         # Add semi-transparent background for label
         label = f"{detection['name'].title()} ({condition})"
         label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)[0]
-        
+
         # Draw background rectangle with some transparency effect
         overlay = output_image.copy()
         cv2.rectangle(overlay, (x1, y1-35), (x1+label_size[0]+15, y1), color, -1)
         output_image = cv2.addWeighted(overlay, 0.8, output_image, 0.2, 0)
-        
+
         # Add white text with shadow for better visibility
         cv2.putText(output_image, label, (x1+7, y1-12),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 3)  # Shadow
         cv2.putText(output_image, label, (x1+5, y1-10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)  # Main text
-        
+
         # Check for alerts
         if condition == "injured":
             show_voice_alert("injury",
                              f"Injured {detection['name']} needs help!",
                              detection['name'], location)
-        
+
         if threats != ["None"]:
             threat_list = [t for t in threats if t != "None"]
             if threat_list:
                 show_voice_alert("threat",
                                  f"Threats detected: {', '.join(threat_list)}",
                                  location=location, threats=threat_list)
-    
+
     # Create DataFrame
     df = pd.DataFrame(results_list) if results_list else pd.DataFrame()
     return df, output_image
 
-    
+
 def process_video_streamlit(video_path):
     """Process video with improved tracking and beautiful bbox visualization"""
     model, model2, animal_envo, animal_condition_model = load_models_silently()
-    
+
     if not all([model, model2, animal_envo, animal_condition_model]):
         st.error("❌ Failed to load AI models. Please check model files and try again.")
         return None, None, None
-    
+
     cap = cv2.VideoCapture(video_path)
-    
+
     if not cap.isOpened():
         st.error("Error opening video file")
         return None, None, None
-    
+
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    
+
     # Output video path
     output_path = tempfile.mktemp(suffix='.mp4')
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-    
+
     saved_animals = set()
     results_list = []
     previous_tracks = {}
@@ -764,36 +764,36 @@ def process_video_streamlit(video_path):
     last_threats = ["None"]
     frame_count = 0
     top_frames = []  # Store top 5 frames with most detections
-    
+
     # Alert tracking
     injury_alerts = set()
     threat_alerts = set()
-    
+
     # Progress bar
     progress_bar = st.progress(0)
     status_text = st.empty()
-    
+
     st.info("🔗 Processing video with AI tracking and blockchain security...")
-    
+
     while True:
         ret, frame = cap.read()
         if not ret:
             break
-        
+
         # Update progress
         progress = frame_count / total_frames
         progress_bar.progress(progress)
         status_text.text(f"Analyzing frame {frame_count}/{total_frames}")
-        
+
         timestamp = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
-        
+
         current_detections = []
         if frame_count % 5 == 0:  # Detection every 5 frames
             current_detections = detect_all_animals(frame, model2)
-        
+
         if current_detections:
             tracks = improved_tracking(current_detections, previous_tracks)  # Using improved tracking
-            
+
             # Store frame for top 5 if it has detections
             if len(tracks) > 0:
                 frame_data = {
@@ -808,13 +808,13 @@ def process_video_streamlit(video_path):
                 top_frames.sort(key=lambda x: x['detection_count'], reverse=True)
                 if len(top_frames) > 5:
                     top_frames = top_frames[:5]
-            
+
             # Update previous tracks with confidence info
             previous_tracks = {}
             for track in tracks:
                 track_id = track["track_id"]
                 detection = track["detection"]
-                
+
                 previous_tracks[track_id] = {
                     "name": detection["name"],
                     "center": detection["center"],
@@ -822,7 +822,7 @@ def process_video_streamlit(video_path):
                     "cropped": detection["cropped"],
                     "conf": detection["conf"]  # Store confidence for better tracking
                 }
-            
+
             # Check conditions
             if frame_count % 15 == 0:  # Condition check every 15 frames
                 for track in tracks:
@@ -830,21 +830,21 @@ def process_video_streamlit(video_path):
                     detection = track["detection"]
                     condition = get_condition(detection["cropped"], animal_condition_model)
                     last_conditions[track_id] = condition
-            
+
             # Check threats
             if frame_count % 10 == 0:  # Threat check every 10 frames
                 last_threats = get_threats(frame, model, animal_envo)
-            
+
             # Process each track
             for track in tracks:
                 track_id = track["track_id"]
                 detection = track["detection"]
-                
+
                 if track_id not in saved_animals:
                     condition = last_conditions.get(track_id, "normal")
                     threat_str = ",".join(last_threats)
                     location = get_random_location(detection["name"])
-                    
+
                     # Create animal record for blockchain
                     animal_record = {
                         "track_id": track_id,
@@ -855,96 +855,96 @@ def process_video_streamlit(video_path):
                         "location": location,
                         "confidence": round(detection["conf"], 2)
                     }
-                    
+
                     # Add to blockchain
                     try:
                         st.session_state.blockchain.add_animal_detection(animal_record)
                     except:
                         pass
-                    
+
                     # Add to results
                     results_list.append(animal_record)
                     saved_animals.add(track_id)
-                    
+
                     # Check for alerts
                     if condition == "injured" and track_id not in injury_alerts:
                         injury_alerts.add(track_id)
-                    
+
                     if last_threats != ["None"] and tuple(last_threats) not in threat_alerts:
                         threat_alerts.add(tuple(last_threats))
-                
+
                 # Enhanced bounding box drawing for video with better visibility
                 x1, y1, x2, y2 = detection["bbox"]
                 color = animal_colors.get(detection["name"], (255, 255, 255))
-                
+
                 # Draw main bounding box with increased thickness
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, 5)  # Increased thickness to 5
-                
+
                 # Add corner markers for better visibility
                 corner_length = 20
                 corner_thickness = 3
-                
+
                 # Top-left corner
                 cv2.line(frame, (x1, y1), (x1 + corner_length, y1), color, corner_thickness)
                 cv2.line(frame, (x1, y1), (x1, y1 + corner_length), color, corner_thickness)
-                
+
                 # Top-right corner
                 cv2.line(frame, (x2, y1), (x2 - corner_length, y1), color, corner_thickness)
                 cv2.line(frame, (x2, y1), (x2, y1 + corner_length), color, corner_thickness)
-                
+
                 # Bottom-left corner
                 cv2.line(frame, (x1, y2), (x1 + corner_length, y2), color, corner_thickness)
                 cv2.line(frame, (x1, y2), (x1, y2 - corner_length), color, corner_thickness)
-                
+
                 # Bottom-right corner
                 cv2.line(frame, (x2, y2), (x2 - corner_length, y2), color, corner_thickness)
                 cv2.line(frame, (x2, y2), (x2, y2 - corner_length), color, corner_thickness)
-                
+
                 # Enhanced label with background and better visibility
                 track_number = track_id.split('_')[-1]
                 label = f"{detection['name'].title()} #{track_number}"
                 confidence_label = f"Conf: {detection['conf']:.2f}"
-                
+
                 # Calculate label dimensions
                 label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.9, 2)[0]
                 conf_size = cv2.getTextSize(confidence_label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
-                
+
                 max_width = max(label_size[0], conf_size[0]) + 20
                 total_height = label_size[1] + conf_size[1] + 20
-                
+
                 # Create semi-transparent background
                 overlay = frame.copy()
                 cv2.rectangle(overlay, (x1, y1-total_height-10), (x1+max_width, y1), color, -1)
                 frame = cv2.addWeighted(overlay, 0.8, frame, 0.2, 0)
-                
+
                 # Add text with shadows for better readability
                 # Main label with shadow
                 cv2.putText(frame, label, (x1+12, y1-total_height+25), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 3)  # Shadow
                 cv2.putText(frame, label, (x1+10, y1-total_height+23), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)  # Main text
-                
+
                 # Confidence label with shadow
                 cv2.putText(frame, confidence_label, (x1+12, y1-8), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)  # Shadow
                 cv2.putText(frame, confidence_label, (x1+10, y1-6), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)  # Main text
-                
+
                 # Add center dot for tracking visualization
                 center_x, center_y = detection["center"]
                 cv2.circle(frame, (center_x, center_y), 5, color, -1)
                 cv2.circle(frame, (center_x, center_y), 8, (255, 255, 255), 2)
-        
+
         out.write(frame)
         frame_count += 1
-    
+
     cap.release()
     out.release()
     progress_bar.empty()
     status_text.empty()
-    
+
     # Show voice alerts for video processing
     for track_id in injury_alerts:
         animal_type = track_id.split('_')[0]
         location = get_specific_location_for_alert(animal_type)
         show_voice_alert("injury", f"Immediate medical attention required for {animal_type}!", animal_type, location)
-    
+
     if len(threat_alerts) > 0:
         all_threats = set()
         for threat_tuple in threat_alerts:
@@ -953,7 +953,7 @@ def process_video_streamlit(video_path):
         if threat_list:
             location = get_specific_location_for_alert("tiger")  # Use tiger zone as default for threats
             show_voice_alert("threat", f"Detected threats: {', '.join(threat_list)}", location=location, threats=threat_list)
-    
+
     # Create DataFrame
     if results_list:
         df = pd.DataFrame(results_list)
@@ -964,38 +964,52 @@ def process_video_streamlit(video_path):
 # Main Streamlit App
 def main():
     st.markdown('<h1 class="main-header">🦁 Wildlife Protection AI System</h1>', unsafe_allow_html=True)
-    
+
     # Sidebar
     st.sidebar.title("🔧 Control Panel")
     st.sidebar.markdown("---")
-    
+
     # Voice settings
     st.sidebar.subheader("🔊 Voice Alerts")
     st.session_state.voice_enabled = st.sidebar.toggle("Enable Voice Alerts", value=st.session_state.voice_enabled)
-    
+
     if st.session_state.voice_enabled:
         st.sidebar.success("🔊 Voice alerts are ON")
         st.sidebar.info("💡 Uses browser speech synthesis - works in cloud!")
     else:
         st.sidebar.info("🔇 Voice alerts are OFF")
-    
+
     st.sidebar.markdown("---")
-    
+
     # File upload section
     st.sidebar.subheader("📁 Upload Files")
-    
+
     # Tab selection for upload type
     upload_type = st.sidebar.radio(
         "Choose upload type:",
         ["📷 Image Analysis", "🎥 Video Analysis"],
         help="Select whether to analyze a single image or video with tracking"
     )
-    
+
+    # Sample images available for the Image Analysis tab, so a reviewer
+    # doesn't need to source and upload their own test image.
+    sample_images = {
+        "Tiger (normal)": "samples/tiger.jpg",
+        "Tiger (threat/fire)": "samples/tiger_fire.jpg",
+        "Elephant (normal)": "samples/elephant.jpg",
+    }
+
     if upload_type == "📷 Image Analysis":
         uploaded_file = st.sidebar.file_uploader(
             "Choose a wildlife image",
             type=['jpg', 'jpeg', 'png', 'bmp'],
             help="Upload an image file for instant wildlife detection"
+        )
+
+        st.sidebar.markdown("**Or try a sample:**")
+        selected_sample = st.sidebar.selectbox(
+            "Sample images",
+            ["None"] + list(sample_images.keys())
         )
     else:
         uploaded_file = st.sidebar.file_uploader(
@@ -1003,24 +1017,34 @@ def main():
             type=['mp4', 'avi', 'mov', 'mkv'],
             help="Upload video file (recommended: under 2 minutes for optimal performance)"
         )
-    
+        selected_sample = "None"
+
     # Main content area
     col1, col2 = st.columns([2, 1])
-    
+
     with col1:
         if upload_type == "📷 Image Analysis":
             st.subheader("📷 Image Analysis")
-            
-            if uploaded_file is not None:
-                # Display uploaded image
+
+            # Resolve the active image: a chosen sample takes priority,
+            # otherwise fall back to whatever the user uploaded.
+            if selected_sample != "None":
+                image = Image.open(sample_images[selected_sample])
+            elif uploaded_file is not None:
                 image = Image.open(uploaded_file)
-                st.image(image, caption="Uploaded Image", use_column_width=True)
-                
+            else:
+                image = None
+
+            if image is not None:
+                # Display active image
+                caption = "Sample Image" if selected_sample != "None" else "Uploaded Image"
+                st.image(image, caption=caption, use_column_width=True)
+
                 # Convert PIL image to OpenCV format
                 image_array = np.array(image)
                 if len(image_array.shape) == 3:
                     image_array = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
-                
+
                 # Process button
                 if st.button("🔍 Analyze Image", type="primary", use_container_width=True):
                     with st.spinner("🤖 AI is analyzing the image..."):
@@ -1030,20 +1054,20 @@ def main():
                                 temp_status = st.info("🔄 Initializing AI models...")
                                 load_models_silently()
                                 temp_status.empty()
-                        
+
                         df, output_image = process_single_image(image_array)
-                        
+
                         if df is not None and not df.empty:
                             st.session_state.results_df = df
                             st.session_state.processing_complete = True
-                            
+
                             # Add to session history
                             add_to_session_history("Image Analysis", df)
-                            
+
                             # Display processed image
                             output_image_rgb = cv2.cvtColor(output_image, cv2.COLOR_BGR2RGB)
                             st.image(output_image_rgb, caption="Detection Results", use_column_width=True)
-                            
+
                             st.markdown("""
                             <div class="success-box">
                                 <h3>✅ Analysis Complete!</h3>
@@ -1052,12 +1076,12 @@ def main():
                             """, unsafe_allow_html=True)
                         else:
                             st.warning("🔍 No animals detected in the image. Try a different image.")
-            
+
             else:
                 st.markdown("""
                 <div class="upload-section">
                     <h3>📷 Upload an Image</h3>
-                    <p>Upload a wildlife image to detect and analyze animals instantly.</p>
+                    <p>Upload a wildlife image, or pick a sample from the sidebar, to detect and analyze animals instantly.</p>
                     <ul>
                         <li>🦁 Detects: Tigers, Elephants, Rhinos</li>
                         <li>🏥 Health assessment (Normal/Injured)</li>
@@ -1067,20 +1091,20 @@ def main():
                     </ul>
                 </div>
                 """, unsafe_allow_html=True)
-        
+
         else:  # Video Analysis
             st.subheader("🎥 Video Analysis with Tracking")
-            
+
             if uploaded_file is not None:
                 # Save uploaded file
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp_file:
                     tmp_file.write(uploaded_file.read())
                     st.session_state.video_path = tmp_file.name
-                
+
                 # Display video info
                 file_size = len(uploaded_file.getvalue()) / (1024*1024)  # MB
                 st.info(f"📊 Video: {uploaded_file.name} ({file_size:.1f} MB)")
-                
+
                 # Process button
                 if st.button("🚀 Start AI Video Analysis", type="primary", use_container_width=True):
                     with st.spinner("🤖 AI is processing video with tracking..."):
@@ -1090,18 +1114,18 @@ def main():
                                 temp_status = st.info("🔄 Initializing AI models...")
                                 load_models_silently()
                                 temp_status.empty()
-                        
+
                         df, output_video_path, top_frames = process_video_streamlit(st.session_state.video_path)
-                        
+
                         if df is not None and not df.empty:
                             st.session_state.results_df = df
                             st.session_state.output_video_path = output_video_path
                             st.session_state.processing_complete = True
                             st.session_state.top_frames = top_frames
-                            
+
                             # Add to session history
                             add_to_session_history("Video Analysis", df)
-                            
+
                             st.markdown("""
                             <div class="success-box">
                                 <h3>✅ Video Processing Complete!</h3>
@@ -1110,7 +1134,7 @@ def main():
                             """, unsafe_allow_html=True)
                         else:
                             st.warning("🔍 No animals detected in the video. Try a different video.")
-            
+
             else:
                 st.markdown("""
                 <div class="upload-section">
@@ -1126,16 +1150,16 @@ def main():
                     </ul>
                 </div>
                 """, unsafe_allow_html=True)
-        
+
         # Results section (common for both image and video)
         if st.session_state.processing_complete and st.session_state.results_df is not None:
             st.markdown("---")
             st.subheader("📊 Detection Results")
-            
+
             # Summary metrics
             df = st.session_state.results_df
             col_a, col_b, col_c, col_d = st.columns(4)
-            
+
             with col_a:
                 st.markdown(f"""
                 <div class="metric-card">
@@ -1143,7 +1167,7 @@ def main():
                     <p>🐅 Total Animals</p>
                 </div>
                 """, unsafe_allow_html=True)
-            
+
             with col_b:
                 injured_count = len(df[df['condition'] == 'injured']) if 'condition' in df.columns else 0
                 st.markdown(f"""
@@ -1152,7 +1176,7 @@ def main():
                     <p>🏥 Injured</p>
                 </div>
                 """, unsafe_allow_html=True)
-            
+
             with col_c:
                 threats_detected = len(df[df['threats'] != 'None']) if 'threats' in df.columns else 0
                 st.markdown(f"""
@@ -1161,7 +1185,7 @@ def main():
                     <p>⚠️ Threats</p>
                 </div>
                 """, unsafe_allow_html=True)
-            
+
             with col_d:
                 species_count = df['species_type'].nunique() if 'species_type' in df.columns else 0
                 st.markdown(f"""
@@ -1170,14 +1194,14 @@ def main():
                     <p>🦏 Species</p>
                 </div>
                 """, unsafe_allow_html=True)
-            
+
             # Data table
             st.markdown("### 📋 Detailed Detection Log")
             st.dataframe(df, use_container_width=True, hide_index=True)
-            
+
             # Download buttons
             col_dl1, col_dl2 = st.columns(2)
-            
+
             with col_dl1:
                 csv = df.to_csv(index=False)
                 st.download_button(
@@ -1188,7 +1212,7 @@ def main():
                     key='download-csv',
                     use_container_width=True
                 )
-            
+
             with col_dl2:
                 if hasattr(st.session_state, 'output_video_path') and upload_type == "🎥 Video Analysis":
                     try:
@@ -1205,7 +1229,7 @@ def main():
                         st.error("Video file not available for download")
                 else:
                     st.info("📷 Video download available for video analysis only")
-            
+
             # Top 5 Frames section for video analysis
             if hasattr(st.session_state, 'top_frames') and st.session_state.top_frames and upload_type == "🎥 Video Analysis":
                 st.markdown("---")
@@ -1215,7 +1239,7 @@ def main():
                     <p>📸 Below are the 5 frames with the highest number of animal detections from your video:</p>
                 </div>
                 """, unsafe_allow_html=True)
-                
+
                 for i, frame_data in enumerate(st.session_state.top_frames):
                     st.markdown(f"""
                     <div class="frame-item">
@@ -1223,11 +1247,11 @@ def main():
                         <p>⏱️ Timestamp: {frame_data['timestamp']}s | 🎬 Frame: {frame_data['frame_number']}</p>
                     </div>
                     """, unsafe_allow_html=True)
-                    
+
                     # Convert BGR to RGB for display
                     frame_rgb = cv2.cvtColor(frame_data['frame'], cv2.COLOR_BGR2RGB)
                     st.image(frame_rgb, caption=f"Top Frame #{i+1}", use_column_width=True)
-                    
+
                     # Download button for individual frame
                     frame_pil = Image.fromarray(frame_rgb)
                     buf = io.BytesIO()
@@ -1240,18 +1264,18 @@ def main():
                         key=f'download-frame-{i}',
                         use_container_width=True
                     )
-                    
+
                     if i < len(st.session_state.top_frames) - 1:
                         st.markdown("---")
-    
+
     with col2:
         st.subheader("🔗 Blockchain Security")
-        
+
         # Blockchain info
         blockchain = st.session_state.blockchain
         total_blocks = len(blockchain.chain)
         is_valid = blockchain.validate_chain()
-        
+
         # Blockchain metrics
         st.markdown(f"""
         <div class="metric-card">
@@ -1259,18 +1283,18 @@ def main():
             <p>📦 Total Blocks</p>
         </div>
         """, unsafe_allow_html=True)
-        
+
         st.markdown(f"""
         <div class="metric-card">
             <h3>{'✅ Valid' if is_valid else '❌ Invalid'}</h3>
             <p>🔐 Chain Status</p>
         </div>
         """, unsafe_allow_html=True)
-        
+
         if total_blocks > 1:
             st.markdown("### 🧱 Recent Blocks")
             chain_data = blockchain.get_chain_data()
-            
+
             # Show last 3 blocks
             for block in reversed(chain_data[-3:]):
                 st.markdown(f"""
@@ -1281,14 +1305,14 @@ def main():
                     Nonce: {block['nonce']}
                 </div>
                 """, unsafe_allow_html=True)
-        
+
         # System status
         st.markdown("### 🖥️ System Status")
-        
+
         model_status = "✅ Ready" if st.session_state.models_loaded else "⏳ Loading"
-        
+
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); 
+        <div style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
                     color: white; padding: 1rem; border-radius: 15px; margin: 1rem 0;">
             <strong>🤖 AI Models:</strong> {model_status}<br>
             <strong>💾 Device:</strong> {device.upper()}<br>
@@ -1298,66 +1322,66 @@ def main():
             <strong>🌿 Theme:</strong> Nature Inspired
         </div>
         """, unsafe_allow_html=True)
-        
+
         # Quick stats
         if st.session_state.processing_complete and st.session_state.results_df is not None:
             df = st.session_state.results_df
-            
+
             st.markdown("### 📈 Quick Statistics")
-            
+
             if 'species_type' in df.columns:
                 species_counts = df['species_type'].value_counts()
                 for species, count in species_counts.items():
                     emoji = "🦏" if species == "rhino" else "🐘" if species == "elephant" else "🐅"
                     st.markdown(f"**{emoji} {species.title()}:** {count}")
-            
+
             if 'condition' in df.columns:
                 st.markdown("---")
                 condition_counts = df['condition'].value_counts()
                 for condition, count in condition_counts.items():
                     emoji = "🏥" if condition == "injured" else "✅"
                     st.markdown(f"**{emoji} {condition.title()}:** {count}")
-        
+
         # Session History Section
         st.markdown("---")
         st.markdown("### 📊 Session History")
-        
+
         st.markdown(f"""
         <div class="metric-card">
             <h3>{st.session_state.total_analyses}</h3>
             <p>🔍 Total Analyses</p>
         </div>
         """, unsafe_allow_html=True)
-        
+
         if st.session_state.session_history:
             # Create session charts
             all_species, all_conditions, all_threats = create_session_charts()
-            
+
             # Session summary charts
             with st.expander("📈 Session Analytics", expanded=False):
                 if all_species:
                     st.markdown("**🦁 Species Distribution**")
                     species_df = pd.DataFrame(list(all_species.items()), columns=['Species', 'Count'])
                     st.bar_chart(species_df.set_index('Species'))
-                
+
                 if all_conditions:
                     st.markdown("**🏥 Health Conditions**")
                     conditions_df = pd.DataFrame(list(all_conditions.items()), columns=['Condition', 'Count'])
-                    
+
                     # Create pie chart data for plotly
                     try:
                         import plotly.express as px
-                        fig = px.pie(conditions_df, values='Count', names='Condition', 
+                        fig = px.pie(conditions_df, values='Count', names='Condition',
                                    color_discrete_map={'normal': '#4CAF50', 'injured': '#F44336'})
                         st.plotly_chart(fig, use_container_width=True)
                     except:
                         st.bar_chart(conditions_df.set_index('Condition'))
-                
+
                 if all_threats:
                     st.markdown("**⚠️ Threat Analysis**")
                     threats_df = pd.DataFrame(list(all_threats.items()), columns=['Threat', 'Count'])
                     st.bar_chart(threats_df.set_index('Threat'))
-                
+
                 # Download session report
                 if st.button("📊 Download Session Report", use_container_width=True):
                     session_report = {
@@ -1369,7 +1393,7 @@ def main():
                         },
                         'detailed_history': st.session_state.session_history
                     }
-                    
+
                     report_json = json.dumps(session_report, indent=2)
                     st.download_button(
                         "💾 Download JSON Report",
@@ -1377,14 +1401,14 @@ def main():
                         f"session_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
                         "application/json"
                     )
-            
+
             # Recent activity
             st.markdown("**🕒 Recent Activity**")
             for entry in reversed(st.session_state.session_history[-3:]):  # Last 3 entries
                 st.markdown(f"""
                 <div class="history-section">
                     <strong>{entry['analysis_type']}</strong> - {entry['timestamp']}<br>
-                    🐅 Animals: {entry['total_animals']} | 
+                    🐅 Animals: {entry['total_animals']} |
                     🏥 Injured: {entry['condition_breakdown'].get('injured', 0)}
                 </div>
                 """, unsafe_allow_html=True)
@@ -1392,31 +1416,31 @@ def main():
             st.info("🔍 No analyses performed yet in this session")
 
 
-                    
+
         # Help section
         with st.expander("ℹ️ Help & Information"):
             st.markdown("""
             **🔍 How to use:**
             1. Choose Image or Video analysis
-            2. Upload your wildlife content
+            2. Upload your wildlife content, or pick a sample image
             3. Click analyze/process button
             4. Review AI detection results
             5. Download reports and processed files
-            
+
             **🦁 Supported Animals:**
             - Tigers 🐅
-            - Elephants 🐘  
+            - Elephants 🐘
             - Rhinos 🦏
-            
+
             **⚠️ Threat Detection:**
             - Weapons and fire
             - Vehicles and humans
-            
+
             **🔊 Voice Alerts:**
             - Injured animal notifications
             - Threat detection announcements
             - Location-specific alerts
-            
+
             **🔗 Blockchain Features:**
             - Immutable detection records
             - Tamper-proof data storage
@@ -1425,5 +1449,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
